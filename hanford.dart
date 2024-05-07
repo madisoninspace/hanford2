@@ -10,6 +10,18 @@ AnsiPen green = AnsiPen()..green();
 AnsiPen red = AnsiPen()..red();
 AnsiPen yellow = AnsiPen()..yellow();
 
+/// Deletes posts based on the given parameters.
+///
+/// The [skip] parameter determines whether to skip the confirmation prompt and delete the posts directly.
+/// The [bluesky] parameter is an instance of the [bsky.Bluesky] class.
+/// The [posts] parameter is a list of [bsky.Post] objects to be deleted.
+///
+/// If [skip] is 'true', the posts will be deleted without any confirmation.
+/// If [skip] is any other value, a confirmation prompt will be displayed before deleting the posts.
+/// The user can confirm the deletion by entering 'y', 'Y', 'yes', 'Yes', or 'YES'.
+/// If the user enters any other value, the deletion will be canceled.
+///
+/// This method is asynchronous and returns a [Future] that completes when the deletion is finished.
 void deletePosts(
     String skip, bsky.Bluesky bluesky, List<bsky.Post> posts) async {
   AnsiPen red = AnsiPen()..red();
@@ -32,6 +44,13 @@ void deletePosts(
   }
 }
 
+/// Sets the environment variables for the Hanford application.
+/// Prompts the user to provide their Hanford username and password,
+/// and asks if they want to skip the warning message.
+/// If the user chooses to skip the warning, the script proceeds to set the environment variables.
+/// If the user chooses not to skip the warning, the script displays a warning message
+/// and asks for confirmation before setting the environment variables.
+/// The environment variables are stored in a .env file.
 Future<void> setEnvironmentVariables() async {
   print('Please provide your Hanford username and password.');
   print('Username: ');
@@ -59,6 +78,15 @@ Future<void> setEnvironmentVariables() async {
   print('Environment variables set.');
 }
 
+/// Converts a string [filter] to a [bsky.FeedFilter] object.
+///
+/// The [filter] parameter represents the type of filter to be converted.
+/// It can have the following values:
+///   - 'postsNoReplies': Returns [bsky.FeedFilter.postsNoReplies].
+///   - 'postsWithMedia': Returns [bsky.FeedFilter.postsWithMedia].
+///   - Any other value: Returns [bsky.FeedFilter.postsAndAuthorThreads].
+///
+/// Returns a [bsky.FeedFilter] object based on the provided [filter] value.
 bsky.FeedFilter convertToFeedFilter(String filter) {
   switch (filter) {
     case 'postsNoReplies':
@@ -70,6 +98,15 @@ bsky.FeedFilter convertToFeedFilter(String filter) {
   }
 }
 
+/// This is the main function of the Hanford application.
+/// It performs the following tasks:
+/// 1. Checks for environment variables: HANFORD_USER, HANFORD_PASS, HANFORD_SKIP_WARNING.
+/// 2. Reads the environment variables from the .env file if it exists.
+/// 3. Sets the environment variables on the actual environment.
+/// 4. Logs in to the bluesky system using the provided user and pass.
+/// 5. Asks the user for the number of posts to fetch and the feed filter.
+/// 6. Fetches the posts based on the provided filter and limit.
+/// 7. Deletes the fetched posts if the user confirms.
 void main() async {
   // Check for these environment variables
   // HANFORD_USER, HANFORD_PASS, HANFORD_SKIP_WARNING

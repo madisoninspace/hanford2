@@ -1,5 +1,7 @@
 ![logo](./assets/logo.png)
 
+[![Dart](https://github.com/madisoninspace/hanford2/actions/workflows/dart.yml/badge.svg)](https://github.com/madisoninspace/hanford2/actions/workflows/dart.yml)
+
 ## Description
 Hanford is a program written in Dart to mass delete posts from Bluesky.
 
