@@ -5,6 +5,7 @@ import 'package:bluesky/bluesky.dart' as bsky;
 
 import 'bluesky.dart';
 
+AnsiPen blue = AnsiPen()..blue();
 AnsiPen green = AnsiPen()..green();
 AnsiPen red = AnsiPen()..red();
 AnsiPen yellow = AnsiPen()..yellow();
@@ -16,14 +17,56 @@ void deletePosts(
   if (skip == 'true') {
     await delete(bluesky, posts);
   } else {
-    print(
-        'Warning: This script will delete ${posts.length} posts. Do you want to continue? (y/n): ');
+    print(red(
+        'Warning: This script will delete ${posts.length} posts. Do you want to continue? (y/n): '));
     final cont = stdin.readLineSync();
-    if (cont == 'y') {
+    if (cont == 'y' ||
+        cont == 'Y' ||
+        cont == 'yes' ||
+        cont == 'Yes' ||
+        cont == 'YES') {
       await delete(bluesky, posts);
     } else {
       print(red('Exiting...'));
     }
+  }
+}
+
+Future<void> setEnvironmentVariables() async {
+  print('Please provide your Hanford username and password.');
+  print('Username: ');
+  final username = stdin.readLineSync();
+  print('Password: ');
+  final password = stdin.readLineSync();
+  print('Skip warning? (y/n): ');
+  final skip = stdin.readLineSync();
+  if (skip == 'y') {
+    print('Skipping warning...');
+  } else {
+    print(
+        'Warning: This script will store your username and password in the environment variables.');
+    print('Do you want to continue? (y/n): ');
+    final cont = stdin.readLineSync();
+    if (cont != 'y') {
+      print('Exiting...');
+      return;
+    }
+  }
+  print('Setting environment variables...');
+  final env = File('.env');
+  await env.writeAsString(
+      'HANFORD_USER=$username\nHANFORD_PASS=$password\nHANFORD_SKIP_WARNING=$skip\n');
+  print('Environment variables set.');
+}
+
+bsky.FeedFilter convertToFeedFilter(String filter) {
+  switch (filter) {
+    case 'postsNoReplies':
+      return bsky.FeedFilter.postsNoReplies;
+    case 'postsWithMedia':
+      return bsky.FeedFilter.postsWithMedia;
+    default:
+      return bsky.FeedFilter.postsAndAuthorThreads;
   }
 }
 
@@ -35,50 +78,42 @@ void main() async {
   var skipWarning = Platform.environment['HANFORD_SKIP_WARNING'];
 
   // Read the environment variables from the .env file
-  if (user == null || pass == null) {
-    try {
-      final env = File('.env');
-      final lines = await env.readAsLines();
-      for (var line in lines) {
-        if (line.startsWith('HANFORD_USER')) {
-          user = line.split('=')[1];
-        } else if (line.startsWith('HANFORD_PASS')) {
-          pass = line.split('=')[1];
-        } else if (line.startsWith('HANFORD_SKIP_WARNING')) {
-          skipWarning = line.split('=')[1];
-        }
-      }
-    } catch (e) {
-      print('Please provide your Hanford username and password.');
-      print('Username: ');
-      final username = stdin.readLineSync();
-      print('Password: ');
-      final password = stdin.readLineSync();
-      print('Skip warning? (y/n): ');
-      final skip = stdin.readLineSync();
-      if (skip == 'y') {
-        print('Skipping warning...');
-      } else {
-        print(
-            'Warning: This script will store your username and password in the environment variables.');
-        print('Do you want to continue? (y/n): ');
-        final cont = stdin.readLineSync();
-        if (cont != 'y') {
-          print('Exiting...');
-          return;
-        }
-      }
-      print('Setting environment variables...');
-      final env = File('.env');
-      await env.writeAsString(
-          'HANFORD_USER=$username\nHANFORD_PASS=$password\nHANFORD_SKIP_WARNING=$skip\n');
-      print('Environment variables set.');
+  final envFile = File('.env');
+  if (envFile.existsSync()) {
+    var mutableEnv = Map<String, String>.from(Platform.environment);
 
-      // Set the user and pass variables
-      user = username;
-      pass = password;
-      skipWarning = skip;
+    final envContents = await envFile.readAsString();
+    final envLines = envContents.split('\n');
+    for (final line in envLines) {
+      final parts = line.split('=');
+      if (parts.length == 2) {
+        final key = parts[0].trim();
+        final value = parts[1].trim();
+        mutableEnv[key] = value;
+      }
     }
+
+    // Set the environment variables on the actual environment
+    if (mutableEnv.containsKey('HANFORD_USER')) {
+      user = mutableEnv['HANFORD_USER'];
+    }
+
+    if (mutableEnv.containsKey('HANFORD_PASS')) {
+      pass = mutableEnv['HANFORD_PASS'];
+    }
+
+    if (mutableEnv.containsKey('HANFORD_SKIP_WARNING')) {
+      skipWarning = mutableEnv['HANFORD_SKIP_WARNING'];
+    }
+  }
+
+  // Check if the variables are null
+  if (user == null || pass == null) {
+    await setEnvironmentVariables();
+    // Set the user and pass variables
+    user = Platform.environment['HANFORD_USER'];
+    pass = Platform.environment['HANFORD_PASS'];
+    skipWarning = Platform.environment['HANFORD_SKIP_WARNING'];
   }
 
   // Login to bluesky
@@ -91,7 +126,7 @@ void main() async {
   }
 
   // Ask the user for the number of posts to fetch. Default is 100.
-  print('Enter the number of posts to fetch (default is 100): ');
+  print(blue('Enter the number of posts to fetch (default is 100): '));
   var limit = stdin.readLineSync();
   var limitInt = 0;
 
@@ -106,28 +141,16 @@ void main() async {
   }
 
   // Ask the user for the feed filter. Default is postsAndAuthorThreads.
-  print('Enter the feed filter (default is postsAndAuthorThreads): ');
-  print(
-      'Options: postsAndAuthorThreads, postsNoReplies, postsWithMedia, postsNoReplies');
+  print(blue('Enter the feed filter (default is postsAndAuthorThreads): '));
+  print(blue('Options: postsNoReplies, postsWithMedia, postsAndAuthorThreads'));
   final filter = stdin.readLineSync();
 
   // Convert filter to FeedFilter enum
-  bsky.FeedFilter feedFilter;
-  if (filter == 'postsAndAuthorThreads') {
-    feedFilter = bsky.FeedFilter.postsAndAuthorThreads;
-  } else if (filter == 'postsNoReplies') {
-    feedFilter = bsky.FeedFilter.postsNoReplies;
-  } else if (filter == 'postsWithMedia') {
-    feedFilter = bsky.FeedFilter.postsWithMedia;
-  } else if (filter == 'postsNoReplies') {
-    feedFilter = bsky.FeedFilter.postsNoReplies;
-  } else {
-    feedFilter = bsky.FeedFilter.postsAndAuthorThreads;
-  }
+  final feedFilter = convertToFeedFilter(filter!);
 
   // Fetch the posts
   final posts = await getPosts(bluesky, filter: feedFilter, limit: limitInt);
-  print('Fetched ${posts.length} posts.');
+  print(green('Fetched ${posts.length} posts.'));
 
   // Ask the user if they want to delete the posts
   deletePosts(skipWarning!, bluesky, posts);
