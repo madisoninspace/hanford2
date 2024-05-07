@@ -1,0 +1,12 @@
+name: hanford2
+version: 0.2.0
+description: Program to batch nuke posts from a bluesky account.
+homepage: https://github.com/madisoninspace/hanford2
+repository: https://github.com/madisoninspace/hanford2
+issue_tracker: https://github.com/madisoninspace/hanford2/issues
+
+environment:
+  sdk: 3.3.4
+dependencies:
+  ansicolor: ^2.0.2
+  bluesky: ^0.15.19
